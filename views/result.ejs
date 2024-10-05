@@ -38,6 +38,21 @@
 
     <h2>Hydrologic Group:</h2>
     <p><strong>Hydrologic Group:</strong> <%= hydgrpDesc %></p>
+    
+    <h2>Weather Summary</h2>
+    <h3>Temperature</h3>
+    <p>Average Temperature: <%= weatherSummary.avgTemp %> °C</p>
+    <p>Minimum Temperature: <%= weatherSummary.minTemp %> °C</p>
+    <p>Maximum Temperature: <%= weatherSummary.maxTemp %> °C</p>
+
+    <h3>Precipitation</h3>
+    <p>Total Precipitation: <%= weatherSummary.totalPrecipitation %> mm</p>
+    <p>Average Precipitation per Hour: <%= weatherSummary.avgPrecipitation %> mm</p>
+
+    <h3>Wind Speed</h3>
+    <p>Average Wind Speed: <%= weatherSummary.avgWindSpeed %> km/h</p>
+    <p>Maximum Wind Speed: <%= weatherSummary.maxWindSpeed %> km/h</p>
+    
 
 </body>
 </html>

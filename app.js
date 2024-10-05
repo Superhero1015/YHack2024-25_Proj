@@ -91,10 +91,63 @@ async function fetchSoilData(latitude, longitude) {
   }
 }
 
+// Function to fetch climate data
+async function fetchWeatherData(latitude, longitude, startDate, endDate) {
+  const apiUrl = `https://archive-api.open-meteo.com/v1/archive`;
+  const params = {
+    latitude,
+    longitude,
+    start_date: startDate,
+    end_date: endDate,
+    hourly: 'temperature_2m,precipitation,wind_speed_10m', // You can customize the parameters here
+    timezone: 'auto'
+  };
+
+  try {
+    const response = await axios.get(apiUrl, { params });
+    const weatherData = response.data;
+    return weatherData;
+  } catch (error) {
+    console.error('Error fetching weather data:', error.message);
+    throw new Error('Error fetching weather data');
+  }
+}
+
 // Route to render the homepage
 app.get('/', (req, res) => {
   res.render('index');
 });
+
+// Function to summarize weather data for gardeners
+function summarizeWeatherData(weatherData) {
+  const hourlyTemps = weatherData.hourly.temperature_2m;
+  const hourlyPrecipitation = weatherData.hourly.precipitation;
+  const hourlyWindSpeeds = weatherData.hourly.wind_speed_10m;
+
+  // Calculate statistics for temperature
+  const avgTemp = (hourlyTemps.reduce((a, b) => a + b, 0) / hourlyTemps.length).toFixed(2);
+  const minTemp = Math.min(...hourlyTemps).toFixed(2);
+  const maxTemp = Math.max(...hourlyTemps).toFixed(2);
+
+  // Calculate statistics for precipitation
+  const totalPrecipitation = hourlyPrecipitation.reduce((a, b) => a + b, 0).toFixed(2);
+  const avgPrecipitation = (totalPrecipitation / hourlyPrecipitation.length).toFixed(2);
+
+  // Calculate statistics for wind speed
+  const avgWindSpeed = (hourlyWindSpeeds.reduce((a, b) => a + b, 0) / hourlyWindSpeeds.length).toFixed(2);
+  const maxWindSpeed = Math.max(...hourlyWindSpeeds).toFixed(2);
+
+  // Return summarized data
+  return {
+    avgTemp,
+    minTemp,
+    maxTemp,
+    avgPrecipitation,
+    totalPrecipitation,
+    avgWindSpeed,
+    maxWindSpeed
+  };
+}
 
 // Handle address submission and fetch both coordinates and soil data
 app.post('/submit-address', async (req, res) => {
@@ -106,6 +159,12 @@ app.post('/submit-address', async (req, res) => {
 
     // Fetch soil data from USDA API
     const soilData = await fetchSoilData(latitude, longitude);
+
+    // Fetch weather data from Open-Meteo API (historical)
+    const weatherData = await fetchWeatherData(latitude, longitude, '2024-09-19', '2024-10-03'); // Example date range
+
+    // Summarize the weather data for the gardener
+    const weatherSummary = summarizeWeatherData(weatherData);
 
     // Extract useful information
     const mapUnit = soilData.mapUnits[0];
@@ -154,7 +213,8 @@ app.post('/submit-address', async (req, res) => {
         meanAnnualPrecip,
         hydgrpDesc,
         floodFreq,
-        pondingFreq
+        pondingFreq,
+        weatherSummary
       });
     });
   } catch (error) {
