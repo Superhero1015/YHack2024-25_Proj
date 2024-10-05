@@ -1,0 +1,17 @@
+{
+  "name": "yhack2024-25_proj",
+  "version": "1.0.0",
+  "description": "YHack2024-25_Proj",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0"
+  }
+}
