@@ -161,7 +161,7 @@ app.post('/submit-address', async (req, res) => {
     const soilData = await fetchSoilData(latitude, longitude);
 
     // Fetch weather data from Open-Meteo API (historical)
-    const weatherData = await fetchWeatherData(latitude, longitude, '2024-09-19', '2024-10-03'); // Example date range
+    const weatherData = await fetchWeatherData(latitude, longitude, '2020-01-01', '2023-12-30'); // Example date range
 
     // Summarize the weather data for the gardener
     const weatherSummary = summarizeWeatherData(weatherData);
