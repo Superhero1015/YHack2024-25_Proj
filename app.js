@@ -29,19 +29,18 @@ app.listen(PORT, () => {
 });
 
 // Create connection to your MySQL database
-const db = mysql.createConnection({
-    host: 'localhost', // Or your Heroku/MySQL server address
-    user: 'root',      // Your MySQL username
-    password: 'password',  // Your MySQL password
-    database: 'garden_db'  // The database name you set up
+const connection = mysql.createConnection(process.env.JAWSDB_URL || {
+    host: 'localhost',
+    user: 'root',
+    password: 'password',
+    database: 'garden_db'
   });
   
-  // Connect to the database
-  db.connect((err) => {
+  connection.connect((err) => {
     if (err) {
-      console.error('Database connection failed:', err.stack);
+      console.error('Error connecting to the database:', err.stack);
       return;
     }
-    console.log('Connected to MySQL database');
+    console.log('Connected to the database');
   });
   
