@@ -1,6 +1,9 @@
 import React from 'react';
 
 function Result({ result }) {
+  if (!result) {
+    return <div>No result data available. Please submit an address first.</div>;
+  }
   return (
     <div>
       <h2>Results for: {result.address}</h2>
@@ -22,3 +25,4 @@ function Result({ result }) {
   );
 }
 
+export default Result;

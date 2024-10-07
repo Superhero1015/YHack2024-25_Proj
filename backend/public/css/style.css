@@ -1,0 +1,47 @@
+.background-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Ensure the video stays behind the content */
+  object-fit: cover; /* Ensures the video covers the entire screen */
+  background-image: url('http://localhost:3000/css/gardening1.jpeg'); /* Fallback for browsers that don't support video */
+  background-size: cover;
+  background-position: center;
+}
+h1 {
+  font-size: 5em;
+  color: green;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.container {
+  align-items: center;
+  padding: 30px;
+  background-color: rgba(255, 255, 255, 0.9);
+  max-width: 400px;
+  height: 600px;
+  margin: 50px auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+input {
+  padding: 5px;
+  width: 100%;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+}
+
+button {
+  padding: 10px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #2a8e40;
+}

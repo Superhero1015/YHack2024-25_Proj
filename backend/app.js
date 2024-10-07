@@ -4,16 +4,24 @@ const axios = require('axios');
 const mysql = require('mysql2');
 const dotenv = require('dotenv');
 const path = require('path');
+const favicon = require('serve-favicon');
+
+const app = express();
 
 // Load environment variables from the .env file
 dotenv.config(); 
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 const LIGHTBOX_API_KEY = process.env.LIGHTBOX_API_KEY;
 const USDA_SOIL_API_KEY = process.env.USDA_SOIL_API_KEY;
 
 console.log('LIGHTBOX_API_KEY:', LIGHTBOX_API_KEY);
+
+// Serve static files (e.g., CSS) from the "public" folder
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve the favicon from the public directory
+app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
 // Middleware to parse form data
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -28,6 +36,7 @@ app.use((req, res, next) => {
 // Set view engine to EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
 
 // Cors for React frontend requests
 const cors = require('cors');
@@ -54,7 +63,7 @@ connection.connect((err) => {
   console.log('Connected to the database');
 });
 
-// Fetch data from APIs (Lightbox, USDA, Weather)
+// Fetch coordinates with better error logging
 async function fetchCoordinates(userAddress) {
   const apiUrl = `https://api.lightboxre.com/v1/addresses/search?text=${encodeURIComponent(userAddress)}`;
   console.log('Fetching coordinates for:', userAddress);
@@ -68,6 +77,7 @@ async function fetchCoordinates(userAddress) {
     });
     
     if (!response.data || !response.data.addresses || response.data.addresses.length === 0) {
+      console.error('No addresses found for:', userAddress);
       throw new Error('Address not found or invalid');
     }
 
@@ -76,7 +86,7 @@ async function fetchCoordinates(userAddress) {
     const { latitude, longitude } = firstAddress.location.representativePoint;
     return { latitude, longitude };
   } catch (error) {
-    console.error('Error fetching coordinates:', error.response?.data || error.message);
+    console.error('Error fetching coordinates from Lightbox:', error.response?.data || error.message);
     throw new Error('Error fetching coordinates');
   }
 }
@@ -158,13 +168,13 @@ app.post('/submit-address', async (req, res) => {
   }
 });
 
-// Static Files (React app)
-// Serve React static assets in production mode
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
 // Catch-all route for serving React index.html for React routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+  if (!req.url.startsWith('/submit-address')) {
+    res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+  } else {
+    res.status(404).send('Not Found');
+  }
 });
 
 // Start the server
