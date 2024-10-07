@@ -44,8 +44,8 @@ strong {
   color: #3498db;
 }
 
-/* Layout Styles */
-div {
+/* Specific container for results */
+.result-container {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -53,21 +53,59 @@ div {
   margin-bottom: 20px;
 }
 
-div h2 {
-  margin-top: 0;
+/* Remove extra boxes around sections */
+.weather-summary-container {
+  padding: 10px 0;
+  border: none;
+  box-shadow: none;
 }
 
-div p {
-  font-size: 1rem;
+/* Tooltip Styles */
+.weather-summary-container {
+  position: relative;
+  display: inline-block;
 }
 
-div h3 {
-  color: #7f8c8d;
+.hover-text {
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
 }
 
-/* Highlight Special Data */
-p strong {
-  font-weight: bold;
+/* Tooltip text styling */
+.tooltip-text {
+  visibility: hidden;
+  width: 220px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 5px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -110px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Tooltip arrow */
+.tooltip-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+/* Show the tooltip when hovering */
+.hover-text:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Responsive Design */
