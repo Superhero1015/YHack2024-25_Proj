@@ -231,26 +231,64 @@ app.post('/submit-address', async (req, res) => {
   }
 
   try {
+    // Fetch coordinates
     const { latitude, longitude } = await fetchCoordinates(address);
+    
+    // Fetch soil data
     const soilData = await fetchSoilData(latitude, longitude);
+    const mapUnit = soilData.mapUnits[0];
+
+    // Extract relevant soil data
+    const soilName = mapUnit.name;
+    const soilType = mapUnit.kind || 'Not available';
+    const farmClass = mapUnit.farmClass || 'Unknown';
+    const slope = `${mapUnit.componentAggregated.slope_l || 0} to ${mapUnit.componentAggregated.slope_h || 'unknown'} percent`;
+    const drainageClass = mapUnit.componentAggregated.drainagecl || 'Unknown';
+    const runoff = mapUnit.componentAggregated.runoff || 'Unknown';
+    const aws025wta = mapUnit.componentAggregated.aws025wta || 'Unknown';
+    const aws050wta = mapUnit.componentAggregated.aws050wta || 'Unknown';
+    const aws0100wta = mapUnit.componentAggregated.aws0100wta || 'Unknown';
+    const aws0150wta = mapUnit.componentAggregated.aws0150wta || 'Unknown';
+    const avgAirTemp = mapUnit.componentAggregated.airtempa_r || 'Unknown';
+    const meanAnnualPrecip = mapUnit.componentAggregated.map_r || 'Unknown';
+    const hydgrpDesc = mapUnit.componentAggregated.hydgrp_desc || 'Unknown';
+    const floodFreq = mapUnit.componentAggregated.flodfreqdcd || 'None';
+    const pondingFreq = mapUnit.componentAggregated.pondfreqprs || 'None';
+
+    // Fetch weather data
     const weatherData = await fetchWeatherData(latitude, longitude, '2020-01-01', '2023-12-30');
     const weatherSummary = summarizeWeatherData(weatherData);
+
+    // Fetch day length data
     const timestamps = [1350526582, 1350363600, 1350277200];  // Example timestamps
     const dayLengthData = await fetchDayLengthData(latitude, longitude, timestamps);
     const averageDayLength = calculateAverageDayLength(dayLengthData);
 
+    // Build result data object with all soil, weather, and day length information
     const resultData = {
       address,
       latitude,
       longitude,
-      soilName: soilData.mapUnits[0].name,
-      soilType: soilData.mapUnits[0].kind,
-      farmClass: soilData.mapUnits[0].farmClass || 'Unknown',
+      soilName,
+      soilType,
+      farmClass,
+      slope,
+      drainageClass,
+      runoff,
+      aws025wta,
+      aws050wta,
+      aws0100wta,
+      aws0150wta,
+      avgAirTemp,
+      meanAnnualPrecip,
+      hydgrpDesc,
+      floodFreq,
+      pondingFreq,
       weatherSummary,
       averageDayLength
     };
 
-    res.json(resultData);
+    res.json(resultData);  // Send back the result data to the frontend
   } catch (error) {
     console.error('Error fetching data:', error.message);
     res.status(500).json({ error: 'There was an issue processing your request' });
