@@ -5,17 +5,27 @@ const mysql = require('mysql2');
 const dotenv = require('dotenv');
 const path = require('path');
 const favicon = require('serve-favicon');
+const OpenAI = require('openai');
 
 const app = express();
 
+
+// Cors for React frontend requests
+const cors = require('cors');
+app.use(cors({
+  origin: 'http://localhost:8080',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+}));
+
 // Load environment variables from the .env file
-dotenv.config(); 
+dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 const LIGHTBOX_API_KEY = process.env.LIGHTBOX_API_KEY;
 const USDA_SOIL_API_KEY = process.env.USDA_SOIL_API_KEY;
-
-console.log('LIGHTBOX_API_KEY:', LIGHTBOX_API_KEY);
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Serve static files (e.g., CSS) from the "public" folder
 app.use(express.static(path.join(__dirname, 'public')));
@@ -27,24 +37,68 @@ app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Global request logger
-app.use((req, res, next) => {
-  console.log(`Received ${req.method} request to ${req.url}`);
-  next();
+// Configure OpenAI API
+const openai = new OpenAI({
+  api_key: OPENAI_API_KEY,
+});
+
+// Route for GPT-4 Turbo API to generate crop recommendation
+app.post('/get-crop-recommendation', async (req, res) => {
+  const { address } = req.body;
+
+  if (!address) {
+    return res.status(400).json({ error: 'Address is required' });
+  }
+
+  try {
+    // Fetch coordinates based on the address
+    const { latitude, longitude } = await fetchCoordinates(address);
+    
+    // Fetch soil data
+    const soilData = await fetchSoilData(latitude, longitude);
+    
+    // Fetch weather data
+    const weatherData = await fetchWeatherData(latitude, longitude, '2020-01-01', '2023-12-30');
+    const weatherSummary = summarizeWeatherData(weatherData);
+
+    // Fetch day length data and calculate average day length
+    const timestamps = [1350526582, 1350363600, 1350277200];  // Example timestamps
+    const dayLengthData = await fetchDayLengthData(latitude, longitude, timestamps);
+    const averageDayLength = calculateAverageDayLength(dayLengthData);
+
+    // Create a prompt for GPT-4 Turbo
+    const prompt = `
+      Based on the following details:
+      Soil Type: ${soilData.mapUnits[0].kind}
+      Average Temperature: ${weatherSummary.avgTemp}°C
+      Total Precipitation: ${weatherSummary.totalPrecipitation} mm
+      Average Wind Speed: ${weatherSummary.avgWindSpeed} km/h
+      Average Day Length: ${averageDayLength}
+      
+      What would be the most suitable crop to grow in this region?`;
+
+    const gptResponse = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: 'system', content: 'You are an agricultural expert.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 150,
+    });
+
+    const recommendation = gptResponse.choices[0].message.content;
+    console.log('Sending recommendation to the frontend:', recommendation);
+
+    res.json({ recommendation });
+  } catch (error) {
+    console.error('Error generating crop recommendation:', error.message);
+    res.status(500).json({ error: 'There was an issue processing your request' });
+  }
 });
 
 // Set view engine to EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
-
-// Cors for React frontend requests
-const cors = require('cors');
-app.use(cors({
-  origin: 'http://localhost:8080', // React frontend origin
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true,
-}));
 
 // MySQL Connection Setup
 const connection = mysql.createConnection({
@@ -117,6 +171,37 @@ async function fetchWeatherData(latitude, longitude, startDate, endDate) {
   }
 }
 
+// New: Fetch day length data from Farmsense API
+async function fetchDayLengthData(latitude, longitude, timestamps) {
+  const apiUrl = `https://api.farmsense.net/v1/daylengths/?lat=${latitude}&lon=${longitude}&d[]=${timestamps.join('&d[]=')}`;
+  
+  try {
+    const response = await axios.get(apiUrl);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching day length data:', error.message);
+    throw new Error('Error fetching day length data');
+  }
+}
+
+// New: Calculate average day length from the fetched data
+function calculateAverageDayLength(dayLengthData) {
+  const dayLengthsInSeconds = dayLengthData.map(entry => {
+    const [hours, minutes, seconds] = entry.Daylength.split(':').map(Number);
+    return (hours * 3600) + (minutes * 60) + seconds;
+  });
+
+  const totalDayLength = dayLengthsInSeconds.reduce((a, b) => a + b, 0);
+  const averageDayLengthInSeconds = totalDayLength / dayLengthsInSeconds.length;
+
+  const hours = Math.floor(averageDayLengthInSeconds / 3600);
+  const minutes = Math.floor((averageDayLengthInSeconds % 3600) / 60);
+  const seconds = Math.floor(averageDayLengthInSeconds % 60);
+
+  return `${hours}:${minutes}:${seconds}`;  // Return the average day length in HH:MM:SS format
+}
+
+// Summarize weather data
 function summarizeWeatherData(weatherData) {
   const hourlyTemps = weatherData.hourly.temperature_2m;
   const hourlyPrecipitation = weatherData.hourly.precipitation;
@@ -150,6 +235,9 @@ app.post('/submit-address', async (req, res) => {
     const soilData = await fetchSoilData(latitude, longitude);
     const weatherData = await fetchWeatherData(latitude, longitude, '2020-01-01', '2023-12-30');
     const weatherSummary = summarizeWeatherData(weatherData);
+    const timestamps = [1350526582, 1350363600, 1350277200];  // Example timestamps
+    const dayLengthData = await fetchDayLengthData(latitude, longitude, timestamps);
+    const averageDayLength = calculateAverageDayLength(dayLengthData);
 
     const resultData = {
       address,
@@ -159,6 +247,7 @@ app.post('/submit-address', async (req, res) => {
       soilType: soilData.mapUnits[0].kind,
       farmClass: soilData.mapUnits[0].farmClass || 'Unknown',
       weatherSummary,
+      averageDayLength
     };
 
     res.json(resultData);
